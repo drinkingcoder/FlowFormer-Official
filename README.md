@@ -9,7 +9,7 @@
 <img src="assets/teaser.png">
 
 ## TODO List
-- [ ] Code release (2022-8-1)
+- [x] Code release (2022-8-1)
 - [x] Models release (2022-8-1)
 
 ## Data Preparation
@@ -44,7 +44,7 @@ By default `datasets.py` will search for the datasets in these locations. You ca
 conda create --name flowformer
 conda activate flowformer
 conda install pytorch=1.6.0 torchvision=0.7.0 cudatoolkit=10.1 matplotlib tensorboard scipy opencv -c pytorch
-pip install yacs loguru einops timm==0.4.12
+pip install yacs loguru einops timm==0.4.12 imageio
 ```
 
 ## Training

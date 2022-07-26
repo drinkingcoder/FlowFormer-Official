@@ -23,6 +23,7 @@ from core.FlowFormer import build_flowformer
 from raft import RAFT
 
 from utils.utils import InputPadder, forward_interpolate
+import imageio
 import itertools
 
 TRAIN_SIZE = [432, 960]
@@ -83,7 +84,7 @@ def compute_weight(hws, image_shape, patch_size=TRAIN_SIZE, sigma=1.0, wtype='ga
     return patch_weights
 
 @torch.no_grad()
-def create_sintel_submission(model, output_path='sintel_submission_multi8_768', sigma=1.0):
+def create_sintel_submission(model, output_path='sintel_submission_multi8_768', sigma=0.05):
     """ Create submission for the Sintel leaderboard """
     print("no warm start")
     #print(f"output path: {output_path}")
@@ -106,12 +107,10 @@ def create_sintel_submission(model, output_path='sintel_submission_multi8_768', 
             flows = 0
             flow_count = 0
 
-            this_flow_low = []
             for idx, (h, w) in enumerate(hws):
                 image1_tile = image1[:, :, h:h+TRAIN_SIZE[0], w:w+TRAIN_SIZE[1]]
                 image2_tile = image2[:, :, h:h+TRAIN_SIZE[0], w:w+TRAIN_SIZE[1]]
                 flow_pre, flow_low = model(image1_tile, image2_tile)
-                this_flow_low.append(forward_interpolate(flow_low[0])[None].cuda())
 
                 padding = (w, IMAGE_SIZE[1]-w-TRAIN_SIZE[1], h, IMAGE_SIZE[0]-h-TRAIN_SIZE[0], 0, 0)
                 flows += F.pad(flow_pre * weights[idx], padding)
@@ -129,10 +128,9 @@ def create_sintel_submission(model, output_path='sintel_submission_multi8_768', 
             frame_utils.writeFlow(output_file, flow)
 
 @torch.no_grad()
-def create_kitti_submission(model, iters=24, output_path='kitti_submission', sigma=0.5):
+def create_kitti_submission(model, output_path='kitti_submission', sigma=0.05):
     """ Create submission for the Sintel leaderboard """
     
-    # IMAGE_SIZE = [400, 1242]
     IMAGE_SIZE = [432, 1242]
 
     print(f"output path: {output_path}")
@@ -150,16 +148,14 @@ def create_kitti_submission(model, iters=24, output_path='kitti_submission', sig
     for test_id in range(len(test_dataset)):
         image1, image2, (frame_id, ) = test_dataset[test_id]
         new_shape = image1.shape[1:]
-        print(f"image size: {new_shape}")
-        if new_shape[1] != IMAGE_SIZE[1] or new_shape[0] != IMAGE_SIZE[0]:
+        if new_shape[1] != IMAGE_SIZE[1]:   # fix the height=432, adaptive ajust the width
             print(f"replace {IMAGE_SIZE} with {new_shape}")
             IMAGE_SIZE[0] = 432
             IMAGE_SIZE[1] = new_shape[1]
             hws = compute_grid_indices(IMAGE_SIZE)
             weights = compute_weight(hws, IMAGE_SIZE, TRAIN_SIZE, sigma)
 
-        #image1, image2 = image1[None].cuda(), image2[None].cuda()
-        padder = InputPadder(image1.shape, mode='kitti432')
+        padder = InputPadder(image1.shape, mode='kitti432') # padding the image to height of 432
         image1, image2 = padder.pad(image1[None].cuda(), image2[None].cuda())
 
         flows = 0
@@ -175,7 +171,6 @@ def create_kitti_submission(model, iters=24, output_path='kitti_submission', sig
             flow_count += F.pad(weights[idx], padding)
 
         flow_pre = flows / flow_count
-        # flow = flow_pre[0].permute(1, 2, 0).cpu().numpy()
         flow = padder.unpad(flow_pre[0]).permute(1, 2, 0).cpu().numpy()
 
         output_filename = os.path.join(output_path, frame_id)
@@ -192,13 +187,12 @@ def create_kitti_submission(model, iters=24, output_path='kitti_submission', sig
         imageio.imwrite(f'vis_kitti_3patch/image/{test_id}_1.png', image2[0].cpu().permute(1, 2, 0).numpy())
 
 @torch.no_grad()
-def validate_kitti(model, iters=24, sigma=0.5):
-    IMAGE_SIZE = [400, 1242]
+def validate_kitti(model, sigma=0.05):
+    IMAGE_SIZE = [432, 1242]
 
     hws = compute_grid_indices(IMAGE_SIZE)
     weights = compute_weight(hws, IMAGE_SIZE, TRAIN_SIZE, sigma)
     model.eval()
-    # test_dataset = datasets.KITTI(split='testing', aug_params=None)
     val_dataset = datasets.KITTI(split='training')
 
     out_list, epe_list = [], []
@@ -207,44 +201,36 @@ def validate_kitti(model, iters=24, sigma=0.5):
         new_shape = image1.shape[1:]
         if new_shape[1] != IMAGE_SIZE[1]:
             print(f"replace {IMAGE_SIZE} with {new_shape}")
+            IMAGE_SIZE[0] = 432
             IMAGE_SIZE[1] = new_shape[1]
             hws = compute_grid_indices(IMAGE_SIZE)
             weights = compute_weight(hws, IMAGE_SIZE, TRAIN_SIZE, sigma)
 
-        # image1, image2 = image1[None].cuda(), image2[None].cuda()
         padder = InputPadder(image1.shape, mode='kitti432')
         image1, image2 = padder.pad(image1[None].cuda(), image2[None].cuda())
 
         flows = 0
         flow_count = 0
 
-        this_flow_low = []
         for idx, (h, w) in enumerate(hws):
             image1_tile = image1[:, :, h:h+TRAIN_SIZE[0], w:w+TRAIN_SIZE[1]]
             image2_tile = image2[:, :, h:h+TRAIN_SIZE[0], w:w+TRAIN_SIZE[1]]
             flow_pre, flow_low = model(image1_tile, image2_tile)
-            this_flow_low.append(forward_interpolate(flow_low[0])[None].cuda())
 
             padding = (w, IMAGE_SIZE[1]-w-TRAIN_SIZE[1], h, IMAGE_SIZE[0]-h-TRAIN_SIZE[0], 0, 0)
             flows += F.pad(flow_pre * weights[idx], padding)
             flow_count += F.pad(weights[idx], padding)
 
         flow_pre = flows / flow_count
-        # flow = flow_pre[0].cpu()
-
-        # _, flow_pr = model(image1, image2, iters=iters, test_mode=True)
         flow = padder.unpad(flow_pre[0]).cpu()
-        # print(f"flow shape = {flow.shape}, flow_gt shape = {flow_gt.shape}")
         epe = torch.sum((flow - flow_gt)**2, dim=0).sqrt()
         mag = torch.sum(flow_gt**2, dim=0).sqrt()
 
         epe = epe.view(-1)
         mag = mag.view(-1)
         val = valid_gt.view(-1) >= 0.5
-        # print(f"valid_gt shape = {valid_gt.shape}, epe shape = {epe.shape}")
 
         out = ((epe > 3.0) & ((epe/mag) > 0.05)).float()
-        # print(f"epe = {epe[val].mean().item()}")
         epe_list.append(epe[val].mean().item())
         out_list.append(out[val].cpu().numpy())
 
@@ -258,12 +244,11 @@ def validate_kitti(model, iters=24, sigma=0.5):
     return {'kitti-epe': epe, 'kitti-f1': f1}
 
 @torch.no_grad()
-def validate_sintel(model):
+def validate_sintel(model, sigma=0.05):
     """ Peform validation using the Sintel (train) split """
 
     IMAGE_SIZE = [436, 1024]
     
-    sigma = 0.05
     hws = compute_grid_indices(IMAGE_SIZE)
     weights = compute_weight(hws, IMAGE_SIZE, TRAIN_SIZE, sigma)
 
@@ -327,12 +312,14 @@ if __name__ == '__main__':
     elif args.eval == 'kitti_submission':
         exp_func = create_kitti_submission
         cfg = get_submission_cfg()
+        cfg.latentcostformer.decoder_depth = 24
     elif args.eval == 'sintel_validation':
         exp_func = validate_sintel
         cfg = get_things_cfg()
     elif args.eval == 'kitti_validation':
         exp_func = validate_kitti
         cfg = get_things_cfg()
+        cfg.latentcostformer.decoder_depth = 24
     else:
         print(f"EROOR: {args.eval} is not valid")
     cfg.update(vars(args))
