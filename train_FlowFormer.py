@@ -109,13 +109,10 @@ def train(cfg):
                 for val_dataset in cfg.validation:
                     if val_dataset == 'chairs':
                         results.update(evaluate.validate_chairs(model.module))
-                        results.update(evaluate_tile.validate_chairs(model.module))
                     elif val_dataset == 'sintel':
                         results.update(evaluate.validate_sintel(model.module))
-                        results.update(evaluate_tile.validate_sintel(model.module))
                     elif val_dataset == 'kitti':
                         results.update(evaluate.validate_kitti(model.module))
-                        results.update(evaluate_tile.validate_kitti(model.module))
 
                 logger.write_dict(results)
                 
