@@ -66,6 +66,42 @@ We provide [models](https://drive.google.com/drive/folders/1K2dcWxaqOLiQ3PoqRdok
     ├── sintel.pth
     ├── kitti.pth
 ```
+
+## Evaluation
+The model to be evaluated is assigned by the `_CN.model` in the config file.
+
+Evaluating the model on the Sintel training set and the KITTI training set. The corresponding config file is `configs/things_eval.py`.
+```Shell
+python evaluate_FlowFormer_tile.py --eval sintel_validation
+python evaluate_FlowFormer_tile.py --eval kitti_validation
+```
+Generating the submission for the Sintel and KITTI benchmarks. The corresponding config file is `configs/submission.py`.
+```Shell
+python evaluate_FlowFormer_tile.py --eval sintel_submission
+python evaluate_FlowFormer_tile.py --eval kitti_submission
+```
+Visualizing the sintel dataset:
+```Shell
+python visualize_flow.py --eval_type sintel
+```
+Visualizing an image sequence extracted from a video:
+```Shell
+python visualize_flow.py --eval_type seq
+```
+The default image sequence format is:
+```Shell
+├── demo_data
+    ├── mihoyo
+        ├── 000001.png
+        ├── 000002.png
+        ├── 000003.png
+            .
+            .
+            .
+        ├── 001000.png
+```
+
+
 ## License
 FlowFormer is released under the Apache License
 

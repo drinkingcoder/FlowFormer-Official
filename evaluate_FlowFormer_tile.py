@@ -300,7 +300,6 @@ def validate_sintel(model, sigma=0.05):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', help="dataset for evaluation")
     parser.add_argument('--eval', help='eval benchmark')
     args = parser.parse_args()
 
