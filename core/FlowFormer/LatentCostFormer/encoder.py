@@ -17,6 +17,7 @@ from .twins import Size_, PosConv
 from .cnn import TwinsSelfAttentionLayer, TwinsCrossAttentionLayer, BasicEncoder
 from .mlpmixer import MLPMixerLayer
 from .convnext import ConvNextLayer
+import time
 
 from timm.models.layers import Mlp, DropPath, activations, to_2tuple, trunc_normal_
 
@@ -334,11 +335,19 @@ class MemoryEncoder(nn.Module):
         return corr
 
     def forward(self, img1, img2, data, context=None):
-        feat_s = self.feat_encoder(img1)
-        feat_t = self.feat_encoder(img2)
+        # The original implementation
+        # feat_s = self.feat_encoder(img1)
+        # feat_t = self.feat_encoder(img2)
+        # feat_s = self.channel_convertor(feat_s)
+        # feat_t = self.channel_convertor(feat_t)
 
-        feat_s = self.channel_convertor(feat_s)
-        feat_t = self.channel_convertor(feat_t)
+        imgs = torch.cat([img1, img2], dim=0)
+        feats = self.feat_encoder(imgs)
+        feats = self.channel_convertor(feats)
+        B = feats.shape[0] // 2
+
+        feat_s = feats[:B]
+        feat_t = feats[B:]
 
         B, C, H, W = feat_s.shape
         size = (H, W)
