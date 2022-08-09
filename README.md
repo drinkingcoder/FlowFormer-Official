@@ -82,7 +82,7 @@ python evaluate_FlowFormer_tile.py --eval kitti_submission
 ```
 Visualizing the sintel dataset:
 ```Shell
-python visualize_flow.py --eval_type sintel
+python visualize_flow.py --eval_type sintel --keep_size
 ```
 Visualizing an image sequence extracted from a video:
 ```Shell

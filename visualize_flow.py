@@ -108,7 +108,7 @@ def compute_adaptive_image_size(image_size):
 
     return image_size
 
-def prepare_image(root_dir, viz_root_dir, fn1, fn2):
+def prepare_image(root_dir, viz_root_dir, fn1, fn2, keep_size):
     print(f"preparing image...")
     print(f"root dir = {root_dir}, fn = {fn1}")
 
@@ -116,9 +116,10 @@ def prepare_image(root_dir, viz_root_dir, fn1, fn2):
     image2 = frame_utils.read_gen(osp.join(root_dir, fn2))
     image1 = np.array(image1).astype(np.uint8)[..., :3]
     image2 = np.array(image2).astype(np.uint8)[..., :3]
-    dsize = compute_adaptive_image_size(image1.shape[0:2])
-    image1 = cv2.resize(image1, dsize=dsize, interpolation=cv2.INTER_CUBIC)
-    image2 = cv2.resize(image2, dsize=dsize, interpolation=cv2.INTER_CUBIC)
+    if not keep_size:
+        dsize = compute_adaptive_image_size(image1.shape[0:2])
+        image1 = cv2.resize(image1, dsize=dsize, interpolation=cv2.INTER_CUBIC)
+        image2 = cv2.resize(image2, dsize=dsize, interpolation=cv2.INTER_CUBIC)
     image1 = torch.from_numpy(image1).permute(2, 0, 1).float()
     image2 = torch.from_numpy(image2).permute(2, 0, 1).float()
 
@@ -145,13 +146,13 @@ def build_model():
 
     return model
 
-def visualize_flow(root_dir, viz_root_dir, model, img_pairs):
+def visualize_flow(root_dir, viz_root_dir, model, img_pairs, keep_size):
     weights = None
     for img_pair in img_pairs:
         fn1, fn2 = img_pair
         print(f"processing {fn1}, {fn2}...")
 
-        image1, image2, viz_fn = prepare_image(root_dir, viz_root_dir, fn1, fn2)
+        image1, image2, viz_fn = prepare_image(root_dir, viz_root_dir, fn1, fn2, keep_size)
         flow, weights = compute_flow(model, image1, image2, weights)
         flow_img = flow_viz.flow_to_image(flow)
         cv2.imwrite(viz_fn, flow_img[:, :, [2,1,0]])
@@ -180,12 +181,13 @@ def generate_pairs(dirname, start_idx, end_idx):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--eval_type', default='sintel')
-    parser.add_argument('--start_idx', type=int, default=1)
-    parser.add_argument('--end_idx', type=int, default=1200)
     parser.add_argument('--root_dir', default='.')
     parser.add_argument('--sintel_dir', default='datasets/Sintel/test/clean')
     parser.add_argument('--seq_dir', default='demo_data/mihoyo')
+    parser.add_argument('--start_idx', type=int, default=1)     # starting index of the image sequence
+    parser.add_argument('--end_idx', type=int, default=1200)    # ending index of the image sequence
     parser.add_argument('--viz_root_dir', default='viz_results')
+    parser.add_argument('--keep_size', action='store_true')     # keep the image size, or the image will be adaptively resized.
 
     args = parser.parse_args()
 
@@ -199,4 +201,4 @@ if __name__ == '__main__':
     elif args.eval_type == 'seq':
         img_pairs = generate_pairs(args.seq_dir, args.start_idx, args.end_idx)
     with torch.no_grad():
-        visualize_flow(root_dir, viz_root_dir, model, img_pairs)
+        visualize_flow(root_dir, viz_root_dir, model, img_pairs, args.keep_size)
