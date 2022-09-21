@@ -71,28 +71,33 @@ def compute_flow(model, image1, image2, weights=None):
 
     image_size = image1.shape[1:]
 
-    hws = compute_grid_indices(image_size)
-    if weights is None:
-        weights = compute_weight(hws, image_size, sigma=0.05)
-
     image1, image2 = image1[None].cuda(), image2[None].cuda()
 
-    flows = 0
-    flow_count = 0
+    hws = compute_grid_indices(image_size)
+    if weights is None:     # no tile
+        padder = InputPadder(image1.shape)
+        image1, image2 = padder.pad(image1, image2)
 
-    for idx, (h, w) in enumerate(hws):
-        image1_tile = image1[:, :, h:h+TRAIN_SIZE[0], w:w+TRAIN_SIZE[1]]
-        image2_tile = image2[:, :, h:h+TRAIN_SIZE[0], w:w+TRAIN_SIZE[1]]    
-        flow_pre, _ = model(image1_tile, image2_tile)
-        padding = (w, image_size[1]-w-TRAIN_SIZE[1], h, image_size[0]-h-TRAIN_SIZE[0], 0, 0)
-        flows += F.pad(flow_pre * weights[idx], padding)
-        # flow_count += F.pad(weights, padding)
-        flow_count += F.pad(weights[idx], padding)
+        flow_pre, _ = model(image1, image2)
 
-    flow_pre = flows / flow_count
-    flow = flow_pre[0].permute(1, 2, 0).cpu().numpy()
+        flow_pre = padder.unpad(flow_pre)
+        flow = flow_pre[0].permute(1, 2, 0).cpu().numpy()
+    else:                   # tile
+        flows = 0
+        flow_count = 0
 
-    return flow, weights
+        for idx, (h, w) in enumerate(hws):
+            image1_tile = image1[:, :, h:h+TRAIN_SIZE[0], w:w+TRAIN_SIZE[1]]
+            image2_tile = image2[:, :, h:h+TRAIN_SIZE[0], w:w+TRAIN_SIZE[1]]    
+            flow_pre, _ = model(image1_tile, image2_tile)
+            padding = (w, image_size[1]-w-TRAIN_SIZE[1], h, image_size[0]-h-TRAIN_SIZE[0], 0, 0)
+            flows += F.pad(flow_pre * weights[idx], padding)
+            flow_count += F.pad(weights[idx], padding)
+
+        flow_pre = flows / flow_count
+        flow = flow_pre[0].permute(1, 2, 0).cpu().numpy()
+
+    return flow
 
 def compute_adaptive_image_size(image_size):
     target_size = TRAIN_SIZE
@@ -153,7 +158,7 @@ def visualize_flow(root_dir, viz_root_dir, model, img_pairs, keep_size):
         print(f"processing {fn1}, {fn2}...")
 
         image1, image2, viz_fn = prepare_image(root_dir, viz_root_dir, fn1, fn2, keep_size)
-        flow, weights = compute_flow(model, image1, image2, weights)
+        flow = compute_flow(model, image1, image2, weights)
         flow_img = flow_viz.flow_to_image(flow)
         cv2.imwrite(viz_fn, flow_img[:, :, [2,1,0]])
 
