@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from configs.submission import get_cfg as get_submission_cfg
 # from configs.kitti_submission import get_cfg as get_kitti_cfg
 from configs.things_eval import get_cfg as get_things_cfg
+from configs.small_things_eval import get_cfg as get_small_things_cfg
 from core.utils.misc import process_cfg
 import datasets
 from utils import flow_viz
@@ -67,7 +68,7 @@ def compute_weight(hws, image_shape, patch_size=TRAIN_SIZE, sigma=1.0, wtype='ga
     patch_num = len(hws)
     h, w = torch.meshgrid(torch.arange(patch_size[0]), torch.arange(patch_size[1]))
     h, w = h / float(patch_size[0]), w / float(patch_size[1])
-    c_h, c_w = 0.5, 0.5 
+    c_h, c_w = 0.5, 0.5
     h, w = h - c_h, w - c_w
     weights_hw = (h ** 2 + w ** 2) ** 0.5 / sigma
     denorm = 1 / (sigma * math.sqrt(2 * math.pi))
@@ -130,7 +131,7 @@ def create_sintel_submission(model, output_path='sintel_submission_multi8_768', 
 @torch.no_grad()
 def create_kitti_submission(model, output_path='kitti_submission', sigma=0.05):
     """ Create submission for the Sintel leaderboard """
-    
+
     IMAGE_SIZE = [432, 1242]
 
     print(f"output path: {output_path}")
@@ -248,7 +249,7 @@ def validate_sintel(model, sigma=0.05):
     """ Peform validation using the Sintel (train) split """
 
     IMAGE_SIZE = [436, 1024]
-    
+
     hws = compute_grid_indices(IMAGE_SIZE)
     weights = compute_weight(hws, IMAGE_SIZE, TRAIN_SIZE, sigma)
 
@@ -256,13 +257,13 @@ def validate_sintel(model, sigma=0.05):
     results = {}
     for dstype in ['final', "clean"]:
         val_dataset = datasets.MpiSintel(split='training', dstype=dstype)
-        
+
         epe_list = []
 
         for val_id in range(len(val_dataset)):
             if val_id % 50 == 0:
                 print(val_id)
-            
+
             image1, image2, flow_gt, _ = val_dataset[val_id]
             image1 = image1[None].cuda()
             image2 = image2[None].cuda()
@@ -285,7 +286,6 @@ def validate_sintel(model, sigma=0.05):
 
             epe = torch.sum((flow_pre - flow_gt)**2, dim=0).sqrt()
             epe_list.append(epe.view(-1).numpy())
-            print(epe.mean())
 
         epe_all = np.concatenate(epe_list)
         epe = np.mean(epe_all)
@@ -300,7 +300,9 @@ def validate_sintel(model, sigma=0.05):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--model', help='load model')
     parser.add_argument('--eval', help='eval benchmark')
+    parser.add_argument('--small', action='store_true', help='use small model')
     args = parser.parse_args()
 
     exp_func = None
@@ -314,10 +316,16 @@ if __name__ == '__main__':
         cfg.latentcostformer.decoder_depth = 24
     elif args.eval == 'sintel_validation':
         exp_func = validate_sintel
-        cfg = get_things_cfg()
+        if args.small:
+            cfg = get_small_things_cfg()
+        else:
+            cfg = get_things_cfg()
     elif args.eval == 'kitti_validation':
         exp_func = validate_kitti
-        cfg = get_things_cfg()
+        if args.small:
+            cfg = get_small_things_cfg()
+        else:
+            cfg = get_things_cfg()
         cfg.latentcostformer.decoder_depth = 24
     else:
         print(f"EROOR: {args.eval} is not valid")

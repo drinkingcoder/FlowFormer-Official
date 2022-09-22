@@ -10,6 +10,8 @@ import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from configs.default import get_cfg
+from configs.things_eval import get_cfg as get_things_cfg
+from configs.small_things_eval import get_cfg as get_small_things_cfg
 from core.utils.misc import process_cfg
 import datasets
 from utils import flow_viz
@@ -54,13 +56,13 @@ def validate_sintel(model):
         for val_id in range(len(val_dataset)):
             image1, image2, flow_gt, _ = val_dataset[val_id]
             image1 = image1[None].cuda()
-            image2 = image2[None].cuda() 
+            image2 = image2[None].cuda()
             padder = InputPadder(image1.shape)
             image1, image2 = padder.pad(image1, image2)
 
             flow_pre = model(image1, image2)
 
-            flow_pre = padder.unpad(flow_pre[0]).cpu()
+            flow_pre = padder.unpad(flow_pre[0]).cpu()[0]
 
             epe = torch.sum((flow_pre - flow_gt)**2, dim=0).sqrt()
             epe_list.append(epe.view(-1).numpy())
@@ -76,6 +78,36 @@ def validate_sintel(model):
 
     return results
 
+@torch.no_grad()
+def create_sintel_submission(model, output_path='sintel_submission'):
+    """ Create submission for the Sintel leaderboard """
+
+    model.eval()
+    for dstype in ['final', "clean"]:
+        test_dataset = datasets.MpiSintel(split='test', aug_params=None, dstype=dstype)
+
+        for test_id in range(len(test_dataset)):
+            if (test_id+1) % 100 == 0:
+                print(f"{test_id} / {len(test_dataset)}")
+            image1, image2, (sequence, frame) = test_dataset[test_id]
+            image1, image2 = image1[None].cuda(), image2[None].cuda()
+
+            padder = InputPadder(image1.shape)
+            image1, image2 = padder.pad(image1, image2)
+
+            flow_pre = model(image1, image2)
+
+            flow_pre = padder.unpad(flow_pre[0]).cpu()
+            flow = flow_pre[0].permute(1, 2, 0).cpu().numpy()
+
+            output_dir = os.path.join(output_path, dstype, sequence)
+            output_file = os.path.join(output_dir, 'frame%04d.flo' % (frame+1))
+
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+
+            frame_utils.writeFlow(output_file, flow)
+
 
 @torch.no_grad()
 def validate_kitti(model):
@@ -89,12 +121,12 @@ def validate_kitti(model):
         image1 = image1[None].cuda()
         image2 = image2[None].cuda()
 
-        padder = InputPadder(image1.shape, mode='kitti')
+        padder = InputPadder(image1.shape)
         image1, image2 = padder.pad(image1, image2)
 
         flow_pre = model(image1, image2)
 
-        flow_pre = padder.unpad(flow_pre[0]).cpu()
+        flow_pre = padder.unpad(flow_pre[0]).cpu()[0]
 
         epe = torch.sum((flow_pre - flow_gt)**2, dim=0).sqrt()
         mag = torch.sum(flow_gt**2, dim=0).sqrt()
@@ -125,11 +157,17 @@ if __name__ == '__main__':
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
     parser.add_argument('--alternate_corr', action='store_true', help='use efficent correlation implementation')
     args = parser.parse_args()
-    cfg = get_cfg()
+    # cfg = get_cfg()
+    if args.small:
+        cfg = get_small_things_cfg()
+    else:
+        cfg = get_things_cfg()
     cfg.update(vars(args))
 
     model = torch.nn.DataParallel(build_flowformer(cfg))
     model.load_state_dict(torch.load(cfg.model))
+
+    print(args)
 
     model.cuda()
     model.eval()
@@ -146,5 +184,8 @@ if __name__ == '__main__':
 
         elif args.dataset == 'kitti':
             validate_kitti(model.module)
+
+        elif args.dataset == 'sintel_submission':
+            create_sintel_submission(model.module)
 
 
