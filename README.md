@@ -72,9 +72,30 @@ The model to be evaluated is assigned by the `_CN.model` in the config file.
 
 Evaluating the model on the Sintel training set and the KITTI training set. The corresponding config file is `configs/things_eval.py`.
 ```Shell
+# with tiling technique
 python evaluate_FlowFormer_tile.py --eval sintel_validation
 python evaluate_FlowFormer_tile.py --eval kitti_validation
+# without tiling technique
+python evaluate_FlowFormer.py --dataset sintel
 ```
+||with tile|w/o tile|
+|----|-----|--------|
+|clean|0.94|1.01|
+|final|2.33|2.40|
+
+Evaluating the small version model. The corresponding config file is `configs/small_things_eval.py`.
+```Shell
+# with tiling technique
+python evaluate_FlowFormer_tile.py --eval sintel_validation --small
+# without tiling technique
+python evaluate_FlowFormer.py --dataset sintel --small
+```
+||with tile|w/o tile|
+|----|-----|--------|
+|clean|1.21|1.32|
+|final|2.61|2.68|
+
+
 Generating the submission for the Sintel and KITTI benchmarks. The corresponding config file is `configs/submission.py`.
 ```Shell
 python evaluate_FlowFormer_tile.py --eval sintel_submission
