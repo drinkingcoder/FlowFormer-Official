@@ -65,7 +65,10 @@ We provide [models](https://drive.google.com/drive/folders/1K2dcWxaqOLiQ3PoqRdok
     ├── things.pth
     ├── sintel.pth
     ├── kitti.pth
+    ├── flowformer-small.pth 
+    ├── things_kitti.pth
 ```
+flowformer-small.pth is a small version of our flowformer. things_kitti.pth is the FlowFormer# introduced in our [supplementary](https://drinkingcoder.github.io/publication/flowformer/images/FlowFormer-supp.pdf), used for KITTI training set evaluation.
 
 ## Evaluation
 The model to be evaluated is assigned by the `_CN.model` in the config file.
@@ -74,7 +77,7 @@ Evaluating the model on the Sintel training set and the KITTI training set. The 
 ```Shell
 # with tiling technique
 python evaluate_FlowFormer_tile.py --eval sintel_validation
-python evaluate_FlowFormer_tile.py --eval kitti_validation
+python evaluate_FlowFormer_tile.py --eval kitti_validation --model checkpoints/things_kitti.pth
 # without tiling technique
 python evaluate_FlowFormer.py --dataset sintel
 ```

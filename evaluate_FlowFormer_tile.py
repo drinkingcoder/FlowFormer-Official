@@ -41,6 +41,8 @@ class InputPadder:
             self._pad = [0, 0, 0, 432 - self.ht]
         elif mode == 'kitti400':
             self._pad = [0, 0, 0, 400 - self.ht]
+        elif mode == 'kitti376':
+            self._pad = [0, 0, 0, 376 - self.ht]
         else:
             self._pad = [pad_wd//2, pad_wd - pad_wd//2, 0, pad_ht]
 
@@ -189,7 +191,8 @@ def create_kitti_submission(model, output_path='kitti_submission', sigma=0.05):
 
 @torch.no_grad()
 def validate_kitti(model, sigma=0.05):
-    IMAGE_SIZE = [432, 1242]
+    IMAGE_SIZE = [376, 1242]
+    TRAIN_SIZE[0] = 376
 
     hws = compute_grid_indices(IMAGE_SIZE)
     weights = compute_weight(hws, IMAGE_SIZE, TRAIN_SIZE, sigma)
@@ -202,12 +205,12 @@ def validate_kitti(model, sigma=0.05):
         new_shape = image1.shape[1:]
         if new_shape[1] != IMAGE_SIZE[1]:
             print(f"replace {IMAGE_SIZE} with {new_shape}")
-            IMAGE_SIZE[0] = 432
+            IMAGE_SIZE[0] = 376
             IMAGE_SIZE[1] = new_shape[1]
             hws = compute_grid_indices(IMAGE_SIZE)
             weights = compute_weight(hws, IMAGE_SIZE, TRAIN_SIZE, sigma)
 
-        padder = InputPadder(image1.shape, mode='kitti432')
+        padder = InputPadder(image1.shape, mode='kitti376')
         image1, image2 = padder.pad(image1[None].cuda(), image2[None].cuda())
 
         flows = 0
