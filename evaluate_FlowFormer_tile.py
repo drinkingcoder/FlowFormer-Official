@@ -62,7 +62,6 @@ def compute_grid_indices(image_shape, patch_size=TRAIN_SIZE, min_overlap=20):
     # Make sure the final patch is flush with the image boundary
     hs[-1] = image_shape[0] - patch_size[0]
     ws[-1] = image_shape[1] - patch_size[1]
-    #ws.append(32)
     return [(h, w) for h in hs for w in ws]
 
 import math
@@ -192,9 +191,9 @@ def create_kitti_submission(model, output_path='kitti_submission', sigma=0.05):
 @torch.no_grad()
 def validate_kitti(model, sigma=0.05):
     IMAGE_SIZE = [376, 1242]
-    TRAIN_SIZE[0] = 376
+    TRAIN_SIZE = [376, 720]
 
-    hws = compute_grid_indices(IMAGE_SIZE)
+    hws = compute_grid_indices(IMAGE_SIZE, TRAIN_SIZE)
     weights = compute_weight(hws, IMAGE_SIZE, TRAIN_SIZE, sigma)
     model.eval()
     val_dataset = datasets.KITTI(split='training')
@@ -207,7 +206,7 @@ def validate_kitti(model, sigma=0.05):
             print(f"replace {IMAGE_SIZE} with {new_shape}")
             IMAGE_SIZE[0] = 376
             IMAGE_SIZE[1] = new_shape[1]
-            hws = compute_grid_indices(IMAGE_SIZE)
+            hws = compute_grid_indices(IMAGE_SIZE, TRAIN_SIZE)
             weights = compute_weight(hws, IMAGE_SIZE, TRAIN_SIZE, sigma)
 
         padder = InputPadder(image1.shape, mode='kitti376')
