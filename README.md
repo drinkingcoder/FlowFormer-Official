@@ -8,6 +8,10 @@
 
 <img src="assets/teaser.png">
 
+## News
+Our FlowFormer++ and VideoFlow are accepted by CVPR and ICCV, which ranks 2nd and 1st on the Sintel benchmark!
+Please also refer to our [FlowFormer++](https://github.com/XiaoyuShi97/FlowFormerPlusPlus) and [VideoFlow](https://github.com/XiaoyuShi97/VideoFlow).
+
 ## TODO List
 - [x] Code release (2022-8-1)
 - [x] Models release (2022-8-1)
@@ -136,6 +140,19 @@ FlowFormer is released under the Apache License
   author={Huang, Zhaoyang and Shi, Xiaoyu and Zhang, Chao and Wang, Qiang and Cheung, Ka Chun and Qin, Hongwei and Dai, Jifeng and Li, Hongsheng},
   journal={{ECCV}},
   year={2022}
+}
+@inproceedings{shi2023flowformer++,
+  title={Flowformer++: Masked cost volume autoencoding for pretraining optical flow estimation},
+  author={Shi, Xiaoyu and Huang, Zhaoyang and Li, Dasong and Zhang, Manyuan and Cheung, Ka Chun and See, Simon and Qin, Hongwei and Dai, Jifeng and Li, Hongsheng},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={1599--1610},
+  year={2023}
+}
+@article{huang2023flowformer,
+  title={FlowFormer: A Transformer Architecture and Its Masked Cost Volume Autoencoding for Optical Flow},
+  author={Huang, Zhaoyang and Shi, Xiaoyu and Zhang, Chao and Wang, Qiang and Li, Yijin and Qin, Hongwei and Dai, Jifeng and Wang, Xiaogang and Li, Hongsheng},
+  journal={arXiv preprint arXiv:2306.05442},
+  year={2023}
 }
 ```
 
