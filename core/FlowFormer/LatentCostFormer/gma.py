@@ -49,7 +49,7 @@ class Attention(nn.Module):
 
         self.to_qk = nn.Conv2d(dim, inner_dim * 2, 1, bias=False)
 
-        self.pos_emb = RelPosEmb(max_pos_size, dim_head)
+        # self.pos_emb = RelPosEmb(max_pos_size, dim_head)
 
     def forward(self, fmap):
         heads, b, c, h, w = self.heads, *fmap.shape

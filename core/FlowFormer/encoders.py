@@ -15,6 +15,7 @@ class twins_svt_large(nn.Module):
         del self.svt.blocks[2]
         del self.svt.pos_block[2]
         del self.svt.pos_block[2]
+        del self.svt.norm
     
     def forward(self, x, data=None, layer=2):
         B = x.shape[0]
