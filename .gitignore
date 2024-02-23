@@ -8,3 +8,5 @@ build
 correlation.egg-info
 logs
 checkpoints*
+log_dir_negroni
+wandb
